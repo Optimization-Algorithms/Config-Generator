@@ -86,9 +86,11 @@ enum TestParam {
 
 #[derive(StructOpt, Debug)]
 struct CLIArgs {
+    #[structopt(help="Set instance name")]
     instance: String,
+    #[structopt(help="Set config file")]
     config: PathBuf,
-    #[structopt(short = "o", long = "output-dir")]
+    #[structopt(short = "o", long = "output-dir", help="Specify output directory")]
     output_dir: Option<PathBuf>,
 }
 
