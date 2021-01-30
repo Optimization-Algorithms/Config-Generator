@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, create_dir_all};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -88,6 +88,8 @@ enum TestParam {
 struct CLIArgs {
     instance: String,
     config: PathBuf,
+    #[structopt(short = "o", long = "output-dir")]
+    output_dir: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -164,9 +166,14 @@ fn load_config(config_file: &PathBuf) -> Result<Config, Box<dyn std::error::Erro
     Ok(config)
 }
 
-fn output_config(conf: OutputTemplate, name: &str, index: usize) -> std::io::Result<()> {
+fn output_config(conf: OutputTemplate, name: &str, index: usize, target_dir: &Option<PathBuf>) -> std::io::Result<()> {
     let file_name = format!("{}-{}.yml", name, index);
-    let mut output_file = File::create(file_name)?;
+    let file_path = if let Some(target_dir) = target_dir {
+        target_dir.join(file_name)
+    } else {
+        PathBuf::from(file_name)
+    };
+    let mut output_file = File::create(file_path)?;
     let config = conf.render_once().unwrap();
     output_file.write(config.as_bytes())?;
     Ok(())
@@ -176,11 +183,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = CLIArgs::from_args();
     let config = load_config(&args.config)?;
     let (base_config, test_param, const_param) = config.build_inner_data(&args.instance);
+
+    if let Some(output_dir) = &args.output_dir {
+        if !output_dir.is_dir() {
+            create_dir_all(output_dir)?;
+        }
+    }
+
     for (i, conf) in KernelSearchConfigFactory::new(test_param, const_param)
         .enumerate()
         .map(|(i, conf)| (i, OutputTemplate::new(i, &base_config, conf)))
     {
-        output_config(conf, &args.instance, i)?
+        output_config(conf, &args.instance, i, &args.output_dir)?
     }
 
     Ok(())
