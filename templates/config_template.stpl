@@ -1,0 +1,19 @@
+# Automatically generated configuration file
+# Static Parameters
+PRELOAD: on
+LOG: off
+BUCKET: 'fixed'
+MIP_GAP: 4.0
+PRESOLVE: true
+
+# User set Parameters
+BUCKET_CONF:
+  count: <%=   config.bucket_count %>
+ITERATIONS: <%=  config.iterations %> 
+TIME_LIMIT: <%=  config.time_limit %>
+
+# Generated Parameters 
+DEBUG: '<%= config.base_name %>-<%= index%>-run.csv'
+SOLUTION_FILE: '<%= config.base_name %>-<%= index%>-sol.sol'
+
+<%= body %>

@@ -1,0 +1,13 @@
+[package]
+name = "ks-config-generator"
+version = "0.1.0"
+authors = ["Filippo Ranza <filipporanza@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sailfish = "0.3.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8.15"
+structopt = "0.3.21"
