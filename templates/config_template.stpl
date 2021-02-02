@@ -10,7 +10,14 @@ PRESOLVE: true
 BUCKET_CONF:
   count: <%=   config.bucket_count %>
 ITERATIONS: <%=  config.iterations %> 
-TIME_LIMIT: <%=  config.time_limit %>
+<% if let Some(time_limit) = config.time_limit { %>
+TIME_LIMIT: <%=  time_limit  %>
+<% } %>
+
+<% if let Some(global_time_limit) = config.global_time_limit { %>
+GLOBAL_TIME_LIMIT: <%=  global_time_limit  %>
+<% } %>
+
 
 # Generated Parameters 
 DEBUG: '<%= config.base_name %>-<%= index%>-run.csv'

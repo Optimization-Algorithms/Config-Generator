@@ -1,4 +1,4 @@
-use std::fs::{File, create_dir_all};
+use std::fs::{create_dir_all, File};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -86,11 +86,11 @@ enum TestParam {
 
 #[derive(StructOpt, Debug)]
 struct CLIArgs {
-    #[structopt(help="Set instance name")]
+    #[structopt(help = "Set instance name")]
     instance: String,
-    #[structopt(help="Set config file")]
+    #[structopt(help = "Set config file")]
     config: PathBuf,
-    #[structopt(short = "o", long = "output-dir", help="Specify output directory")]
+    #[structopt(short = "o", long = "output-dir", help = "Specify output directory")]
     output_dir: Option<PathBuf>,
 }
 
@@ -98,8 +98,8 @@ struct CLIArgs {
 struct Config {
     iterations: usize,
     bucket_count: usize,
-    time_limit: usize,
-
+    time_limit: Option<usize>,
+    global_time_limit: Option<usize>,
     parameters: Vec<(String, TestParam)>,
 }
 
@@ -107,17 +107,26 @@ impl<'a> Config {
     fn build_inner_data(
         self,
         base_name: &'a str,
-    ) -> (OutputConfig<'a>, Vec<String>, Vec<(String, bool)>) {
-        let output_config = self.build_base_template(base_name);
+    ) -> Result<(OutputConfig<'a>, Vec<String>, Vec<(String, bool)>), &'static str> {
+        let output_config = self.build_base_template(base_name)?;
         let (test_params, const_param) = Self::convert_to_param_list(self.parameters);
-        (output_config, test_params, const_param)
+        Ok((output_config, test_params, const_param))
     }
 
-    fn build_base_template(&self, base_name: &'a str) -> OutputConfig<'a> {
+    fn build_base_template(&self, base_name: &'a str) -> Result<OutputConfig<'a>, &'static str> {
+        match (self.global_time_limit, self.time_limit) {
+            (Some(_), Some(_)) => Err("`global_time_limit` and `time_limit` cannot be set at the same time"),
+            (None, None) => Err("one of `global_time_limit` or `time_limit` must be set"),
+            _ => Ok(self.build_template(base_name)),
+        }
+    }
+
+    fn build_template(&self, base_name: &'a str) -> OutputConfig<'a> {
         OutputConfig {
             iterations: self.iterations,
             bucket_count: self.bucket_count,
             time_limit: self.time_limit,
+            global_time_limit: self.global_time_limit,
             base_name,
         }
     }
@@ -140,7 +149,8 @@ impl<'a> Config {
 struct OutputConfig<'a> {
     iterations: usize,
     bucket_count: usize,
-    time_limit: usize,
+    time_limit: Option<usize>,
+    global_time_limit: Option<usize>,
     base_name: &'a str,
 }
 
@@ -168,7 +178,12 @@ fn load_config(config_file: &PathBuf) -> Result<Config, Box<dyn std::error::Erro
     Ok(config)
 }
 
-fn output_config(conf: OutputTemplate, name: &str, index: usize, target_dir: &Option<PathBuf>) -> std::io::Result<()> {
+fn output_config(
+    conf: OutputTemplate,
+    name: &str,
+    index: usize,
+    target_dir: &Option<PathBuf>,
+) -> std::io::Result<()> {
     let file_name = format!("{}-{}.yml", name, index);
     let file_path = if let Some(target_dir) = target_dir {
         target_dir.join(file_name)
@@ -184,7 +199,7 @@ fn output_config(conf: OutputTemplate, name: &str, index: usize, target_dir: &Op
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = CLIArgs::from_args();
     let config = load_config(&args.config)?;
-    let (base_config, test_param, const_param) = config.build_inner_data(&args.instance);
+    let (base_config, test_param, const_param) = config.build_inner_data(&args.instance)?;
 
     if let Some(output_dir) = &args.output_dir {
         if !output_dir.is_dir() {
